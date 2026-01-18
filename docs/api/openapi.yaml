@@ -1,0 +1,1119 @@
+openapi: 3.1.0
+info:
+  title: SIGNIA API
+  summary: Structure-level compilation and verification API for SIGNIA bundles.
+  description: |
+    SIGNIA is a structure-level on-chain compilation system. This API provides a practical interface for:
+    - compiling inputs into SIGNIA bundles (schema + manifest + proof)
+    - verifying bundles deterministically
+    - inspecting schemas and proofs
+    - publishing integrity anchors to Solana (optional)
+
+    Notes:
+    - The API is designed to be self-hosted.
+    - Compilation is typically asynchronous due to potentially large inputs.
+    - Outputs are content-addressed by schema hash and bundle id.
+  version: "0.1.0"
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+servers:
+  - url: http://localhost:8787
+    description: Local development server
+  - url: https://api.signia.example
+    description: Example production endpoint (replace with your deployment)
+tags:
+  - name: System
+    description: Service health and metadata
+  - name: Bundles
+    description: Bundle upload, download, and verification
+  - name: Jobs
+    description: Asynchronous compilation jobs
+  - name: Schemas
+    description: Query and inspect compiled schemas
+  - name: Onchain
+    description: Optional publishing and lookups for Solana registry anchoring
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /meta:
+    get:
+      tags: [System]
+      summary: Service metadata
+      operationId: getMeta
+      security: []
+      responses:
+        "200":
+          description: Service metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaResponse"
+
+  /jobs:
+    post:
+      tags: [Jobs]
+      summary: Create a compilation job
+      description: |
+        Creates an asynchronous job to compile an input into a SIGNIA bundle.
+
+        The input can be:
+        - a remote URL (pinned/reproducible recommended)
+        - an uploaded archive or file (via /jobs/{jobId}/inputs)
+        - a repository snapshot (uploaded archive)
+
+        The job returns immediately with an id. Poll /jobs/{jobId} for status.
+      operationId: createJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJobRequest"
+      responses:
+        "201":
+          description: Job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobCreatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+    get:
+      tags: [Jobs]
+      summary: List jobs
+      operationId: listJobs
+      parameters:
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageCursor"
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/JobStatus"
+          description: Filter by status
+      responses:
+        "200":
+          description: Job list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /jobs/{jobId}:
+    get:
+      tags: [Jobs]
+      summary: Get job status
+      operationId: getJob
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [Jobs]
+      summary: Cancel a job
+      operationId: cancelJob
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "202":
+          description: Job cancellation requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobCancelResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /jobs/{jobId}/inputs:
+    post:
+      tags: [Jobs]
+      summary: Upload job input
+      description: |
+        Upload an input artifact for a job. This endpoint accepts:
+        - a repository archive (tar/zip)
+        - a single file (OpenAPI/JSON Schema/Markdown/CSV/etc.)
+      operationId: uploadJobInput
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/UploadInputRequest"
+      responses:
+        "201":
+          description: Input uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadInputResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+
+  /jobs/{jobId}/run:
+    post:
+      tags: [Jobs]
+      summary: Start compilation
+      description: |
+        Starts compilation for the job. The job must have at least one input set.
+      operationId: runJob
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "202":
+          description: Job started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobRunResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /bundles:
+    post:
+      tags: [Bundles]
+      summary: Upload a bundle
+      description: |
+        Upload a full SIGNIA bundle (schema.json, manifest.json, proof.json) as a single archive.
+
+        This is useful for:
+        - verifying bundles created elsewhere
+        - importing artifacts into a registry/cache
+
+        The server may store and index bundles by schema hash.
+      operationId: uploadBundle
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/UploadBundleRequest"
+      responses:
+        "201":
+          description: Bundle uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BundleUploadedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+
+    get:
+      tags: [Bundles]
+      summary: List bundles
+      operationId: listBundles
+      parameters:
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageCursor"
+        - name: schemaHash
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/Hash32Hex"
+          description: Filter by schema hash
+      responses:
+        "200":
+          description: Bundle list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BundleListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /bundles/{bundleId}:
+    get:
+      tags: [Bundles]
+      summary: Get bundle metadata
+      operationId: getBundle
+      parameters:
+        - $ref: "#/components/parameters/BundleId"
+      responses:
+        "200":
+          description: Bundle metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BundleResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /bundles/{bundleId}/download:
+    get:
+      tags: [Bundles]
+      summary: Download a bundle archive
+      operationId: downloadBundle
+      parameters:
+        - $ref: "#/components/parameters/BundleId"
+      responses:
+        "200":
+          description: Bundle archive
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /bundles/{bundleId}/verify:
+    post:
+      tags: [Bundles]
+      summary: Verify a bundle
+      description: |
+        Verifies:
+        - schema canonicalization and schema hash
+        - proof root recomputation from schema leaves
+        - manifest linkage consistency (schema hash, proof root)
+      operationId: verifyBundle
+      parameters:
+        - $ref: "#/components/parameters/BundleId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyBundleRequest"
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyBundleResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /schemas:
+    get:
+      tags: [Schemas]
+      summary: List schemas
+      operationId: listSchemas
+      parameters:
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageCursor"
+        - name: kind
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by artifact kind (e.g., repo, openapi, dataset)
+      responses:
+        "200":
+          description: Schema list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /schemas/{schemaHash}:
+    get:
+      tags: [Schemas]
+      summary: Get schema metadata
+      operationId: getSchema
+      parameters:
+        - $ref: "#/components/parameters/SchemaHash"
+      responses:
+        "200":
+          description: Schema metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /schemas/{schemaHash}/json:
+    get:
+      tags: [Schemas]
+      summary: Download schema.json
+      operationId: downloadSchemaJson
+      parameters:
+        - $ref: "#/components/parameters/SchemaHash"
+      responses:
+        "200":
+          description: schema.json
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /schemas/{schemaHash}/proof:
+    get:
+      tags: [Schemas]
+      summary: Get proof.json for a schema
+      operationId: getSchemaProof
+      parameters:
+        - $ref: "#/components/parameters/SchemaHash"
+      responses:
+        "200":
+          description: proof.json
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /schemas/{schemaHash}/manifest:
+    get:
+      tags: [Schemas]
+      summary: Get manifest.json for a schema
+      operationId: getSchemaManifest
+      parameters:
+        - $ref: "#/components/parameters/SchemaHash"
+      responses:
+        "200":
+          description: manifest.json
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /onchain/records/{schemaHash}:
+    get:
+      tags: [Onchain]
+      summary: Lookup on-chain registry record by schema hash
+      operationId: getOnchainRecord
+      parameters:
+        - $ref: "#/components/parameters/SchemaHash"
+        - name: network
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/SolanaNetwork"
+          description: Solana network to query
+      responses:
+        "200":
+          description: On-chain record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnchainRecordResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /onchain/publish:
+    post:
+      tags: [Onchain]
+      summary: Publish a schema hash anchor on-chain
+      description: |
+        Requests the service to publish an on-chain record for a schema hash.
+
+        This endpoint is typically used with an operator-managed signer, or it can return an unsigned transaction for the client to sign.
+      operationId: publishOnchain
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishOnchainRequest"
+      responses:
+        "200":
+          description: Publish result or unsigned transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublishOnchainResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key used for authentication.
+
+  parameters:
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Id"
+      description: Job identifier
+    BundleId:
+      name: bundleId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Id"
+      description: Bundle identifier
+    SchemaHash:
+      name: schemaHash
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Hash32Hex"
+      description: 32-byte schema hash as hex (lowercase recommended)
+    PageSize:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+      description: Page size
+    PageCursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+        nullable: true
+      description: Opaque pagination cursor
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    RateLimited:
+      description: Rate limited
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    PayloadTooLarge:
+      description: Payload too large
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    Id:
+      type: string
+      minLength: 8
+      maxLength: 128
+      description: Opaque identifier (ULID/UUID recommended)
+      examples: ["01J2Z9KQ3W6K6XQ0Z9B1V2J9XG"]
+    Hash32Hex:
+      type: string
+      pattern: "^[0-9a-f]{64}$"
+      description: 32-byte hash encoded as lowercase hex (64 chars)
+      examples:
+        - "0123012301230123012301230123012301230123012301230123012301230123"
+    Timestamp:
+      type: string
+      format: date-time
+      description: RFC3339 timestamp
+    HealthResponse:
+      type: object
+      required: [status, time]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        time:
+          $ref: "#/components/schemas/Timestamp"
+    MetaResponse:
+      type: object
+      required: [name, version, build]
+      properties:
+        name:
+          type: string
+          example: signia-api
+        version:
+          type: string
+          example: "0.1.0"
+        build:
+          type: object
+          required: [gitCommit]
+          properties:
+            gitCommit:
+              type: string
+              nullable: true
+              example: "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+            rustc:
+              type: string
+              nullable: true
+            solana:
+              type: string
+              nullable: true
+        features:
+          type: array
+          items:
+            type: string
+          description: Enabled server features
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              examples: ["BAD_REQUEST", "UNAUTHORIZED", "NOT_FOUND"]
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+
+    CreateJobRequest:
+      type: object
+      required: [plugin, policies]
+      properties:
+        plugin:
+          type: object
+          required: [id, version]
+          properties:
+            id:
+              type: string
+              description: Plugin id (e.g., repo, openapi, dataset)
+              example: openapi
+            version:
+              type: string
+              description: Plugin version
+              example: "0.1.0"
+        input:
+          type: object
+          description: Optional remote input reference (can also upload via /inputs)
+          properties:
+            kind:
+              type: string
+              enum: [url]
+            uri:
+              type: string
+              format: uri
+            checksum:
+              type: string
+              nullable: true
+              description: Optional checksum for pinned fetch (recommended)
+        pluginConfig:
+          type: object
+          additionalProperties: true
+          description: Plugin configuration (validated by plugin; hashed in manifest)
+        policies:
+          $ref: "#/components/schemas/Policies"
+        output:
+          type: object
+          description: Output preferences
+          properties:
+            includeLeaves:
+              type: boolean
+              default: true
+              description: Include leaf list in proof.json (may be truncated for large schemas)
+            includeProjections:
+              type: boolean
+              default: true
+              description: Include leaf projections in proof.json
+    Policies:
+      type: object
+      required: [normalization, limits]
+      properties:
+        normalization:
+          type: object
+          required: [policyVersion, pathRoot, newline, encoding, symlinks, network]
+          properties:
+            policyVersion:
+              type: string
+              enum: ["v1"]
+            pathRoot:
+              type: string
+              example: "artifact:/"
+            newline:
+              type: string
+              enum: [lf]
+            encoding:
+              type: string
+              enum: ["utf-8"]
+            symlinks:
+              type: string
+              enum: [deny, resolve-within-root]
+            network:
+              type: string
+              enum: [deny, allow-pinned-only]
+        limits:
+          type: object
+          required:
+            - maxTotalBytes
+            - maxFileBytes
+            - maxFiles
+            - maxDepth
+            - maxNodes
+            - maxEdges
+            - timeoutMs
+          properties:
+            maxTotalBytes:
+              type: integer
+              minimum: 1
+              example: 268435456
+            maxFileBytes:
+              type: integer
+              minimum: 1
+              example: 10485760
+            maxFiles:
+              type: integer
+              minimum: 1
+              example: 20000
+            maxDepth:
+              type: integer
+              minimum: 1
+              example: 64
+            maxNodes:
+              type: integer
+              minimum: 1
+              example: 200000
+            maxEdges:
+              type: integer
+              minimum: 1
+              example: 400000
+            timeoutMs:
+              type: integer
+              minimum: 1
+              example: 300000
+
+    JobStatus:
+      type: string
+      enum: [created, waiting_input, queued, running, succeeded, failed, canceled]
+
+    JobCreatedResponse:
+      type: object
+      required: [jobId, status]
+      properties:
+        jobId:
+          $ref: "#/components/schemas/Id"
+        status:
+          $ref: "#/components/schemas/JobStatus"
+
+    UploadInputRequest:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+        kind:
+          type: string
+          enum: [archive, file]
+          default: archive
+        filename:
+          type: string
+          nullable: true
+          description: Logical filename hint
+    UploadInputResponse:
+      type: object
+      required: [jobId, inputId, kind, bytes]
+      properties:
+        jobId:
+          $ref: "#/components/schemas/Id"
+        inputId:
+          $ref: "#/components/schemas/Id"
+        kind:
+          type: string
+          enum: [archive, file]
+        bytes:
+          type: integer
+          minimum: 0
+        sha256:
+          $ref: "#/components/schemas/Hash32Hex"
+
+    JobRunResponse:
+      type: object
+      required: [jobId, status]
+      properties:
+        jobId:
+          $ref: "#/components/schemas/Id"
+        status:
+          $ref: "#/components/schemas/JobStatus"
+
+    JobCancelResponse:
+      type: object
+      required: [jobId, status]
+      properties:
+        jobId:
+          $ref: "#/components/schemas/Id"
+        status:
+          $ref: "#/components/schemas/JobStatus"
+
+    JobResponse:
+      type: object
+      required: [jobId, status, createdAt, updatedAt]
+      properties:
+        jobId:
+          $ref: "#/components/schemas/Id"
+        status:
+          $ref: "#/components/schemas/JobStatus"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        updatedAt:
+          $ref: "#/components/schemas/Timestamp"
+        plugin:
+          type: object
+          required: [id, version]
+          properties:
+            id: { type: string }
+            version: { type: string }
+        input:
+          type: object
+          nullable: true
+          properties:
+            inputId:
+              $ref: "#/components/schemas/Id"
+            sha256:
+              $ref: "#/components/schemas/Hash32Hex"
+        result:
+          type: object
+          nullable: true
+          properties:
+            bundleId:
+              $ref: "#/components/schemas/Id"
+            schemaHash:
+              $ref: "#/components/schemas/Hash32Hex"
+            proofRoot:
+              $ref: "#/components/schemas/Hash32Hex"
+        error:
+          type: object
+          nullable: true
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: object
+              additionalProperties: true
+
+    JobListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobResponse"
+        nextCursor:
+          type: string
+          nullable: true
+
+    UploadBundleRequest:
+      type: object
+      required: [bundle]
+      properties:
+        bundle:
+          type: string
+          format: binary
+        filename:
+          type: string
+          nullable: true
+
+    BundleUploadedResponse:
+      type: object
+      required: [bundleId, schemaHash, proofRoot]
+      properties:
+        bundleId:
+          $ref: "#/components/schemas/Id"
+        schemaHash:
+          $ref: "#/components/schemas/Hash32Hex"
+        proofRoot:
+          $ref: "#/components/schemas/Hash32Hex"
+
+    BundleResponse:
+      type: object
+      required: [bundleId, schemaHash, createdAt]
+      properties:
+        bundleId:
+          $ref: "#/components/schemas/Id"
+        schemaHash:
+          $ref: "#/components/schemas/Hash32Hex"
+        proofRoot:
+          $ref: "#/components/schemas/Hash32Hex"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        artifact:
+          type: object
+          nullable: true
+          properties:
+            kind: { type: string }
+            name: { type: string }
+            namespace: { type: string }
+            ref: { type: string }
+        sizeBytes:
+          type: integer
+          minimum: 0
+
+    BundleListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BundleResponse"
+        nextCursor:
+          type: string
+          nullable: true
+
+    VerifyBundleRequest:
+      type: object
+      properties:
+        strict:
+          type: boolean
+          default: true
+          description: Fail closed on any warning
+        checks:
+          type: array
+          items:
+            type: string
+            enum: [schema_hash, proof_root, manifest_linkage, canonical_json]
+          description: Optional subset of checks to run
+
+    VerifyBundleResponse:
+      type: object
+      required: [ok, schemaHash, proofRoot, checks]
+      properties:
+        ok:
+          type: boolean
+        schemaHash:
+          $ref: "#/components/schemas/Hash32Hex"
+        proofRoot:
+          $ref: "#/components/schemas/Hash32Hex"
+        manifestHash:
+          $ref: "#/components/schemas/Hash32Hex"
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/VerifyCheckResult"
+        warnings:
+          type: array
+          items:
+            type: string
+
+    VerifyCheckResult:
+      type: object
+      required: [name, ok]
+      properties:
+        name:
+          type: string
+        ok:
+          type: boolean
+        details:
+          type: object
+          additionalProperties: true
+
+    SchemaResponse:
+      type: object
+      required: [schemaHash, createdAt]
+      properties:
+        schemaHash:
+          $ref: "#/components/schemas/Hash32Hex"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        artifact:
+          type: object
+          properties:
+            kind: { type: string }
+            name: { type: string }
+            namespace: { type: string }
+            ref: { type: string }
+        counts:
+          type: object
+          properties:
+            entities: { type: integer, minimum: 0 }
+            edges: { type: integer, minimum: 0 }
+            types: { type: integer, minimum: 0 }
+            constraints: { type: integer, minimum: 0 }
+
+    SchemaListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SchemaResponse"
+        nextCursor:
+          type: string
+          nullable: true
+
+    SolanaNetwork:
+      type: string
+      enum: [mainnet-beta, devnet, testnet, localnet]
+      default: mainnet-beta
+
+    PublishMode:
+      type: string
+      enum: [operator_sign, unsigned_tx]
+      default: unsigned_tx
+
+    PublishOnchainRequest:
+      type: object
+      required: [schemaHash, network, mode]
+      properties:
+        schemaHash:
+          $ref: "#/components/schemas/Hash32Hex"
+        proofRoot:
+          $ref: "#/components/schemas/Hash32Hex"
+        manifestHash:
+          $ref: "#/components/schemas/Hash32Hex"
+        network:
+          $ref: "#/components/schemas/SolanaNetwork"
+        mode:
+          $ref: "#/components/schemas/PublishMode"
+        publisher:
+          type: string
+          nullable: true
+          description: Publisher pubkey (base58) if required by policy
+        memo:
+          type: string
+          maxLength: 256
+          nullable: true
+
+    PublishOnchainResponse:
+      type: object
+      required: [mode]
+      properties:
+        mode:
+          $ref: "#/components/schemas/PublishMode"
+        signature:
+          type: string
+          nullable: true
+          description: Transaction signature if operator signed
+        unsignedTransaction:
+          type: string
+          nullable: true
+          description: Base64 encoded unsigned transaction (client must sign and submit)
+        recordAddress:
+          type: string
+          nullable: true
+          description: Derived SchemaRecord PDA address (base58)
+        network:
+          $ref: "#/components/schemas/SolanaNetwork"
+
+    OnchainRecordResponse:
+      type: object
+      required: [schemaHash, recordAddress, status]
+      properties:
+        schemaHash:
+          $ref: "#/components/schemas/Hash32Hex"
+        recordAddress:
+          type: string
+          description: SchemaRecord PDA (base58)
+        publisher:
+          type: string
+          nullable: true
+          description: Publisher pubkey (base58)
+        status:
+          type: string
+          enum: [active, revoked]
+        proofRoot:
+          $ref: "#/components/schemas/Hash32Hex"
+        manifestHash:
+          $ref: "#/components/schemas/Hash32Hex"
+        createdSlot:
+          type: integer
+          minimum: 0
+        updatedSlot:
+          type: integer
+          minimum: 0
+        network:
+          $ref: "#/components/schemas/SolanaNetwork"
