@@ -1,0 +1,281 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://signia.dev/schemas/v1/schema.json",
+  "title": "SIGNIA Schema v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "kind",
+    "meta",
+    "entities",
+    "edges"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "v1",
+      "description": "Schema format version."
+    },
+    "kind": {
+      "type": "string",
+      "minLength": 1,
+      "description": "High-level artifact kind (e.g., repo, openapi, dataset, doc)."
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "createdAt",
+        "source",
+        "normalization"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Freeform labels for UI; must be deterministic in generation."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation time recorded by the compiler. In deterministic mode, this should be set to a fixed value or omitted by compilers; recommended for API job metadata not schema content."
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "locator"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Input source type (path, archive, url)."
+            },
+            "locator": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque identifier for the input root (no absolute host paths)."
+            },
+            "contentHash": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$",
+              "description": "SHA-256 hex of the raw input container (optional)."
+            }
+          }
+        },
+        "normalization": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "policyVersion",
+            "pathRoot",
+            "newline",
+            "encoding",
+            "symlinks",
+            "network"
+          ],
+          "properties": {
+            "policyVersion": {
+              "type": "string",
+              "const": "v1"
+            },
+            "pathRoot": {
+              "type": "string",
+              "pattern": "^artifact:/$"
+            },
+            "newline": {
+              "type": "string",
+              "enum": [
+                "lf"
+              ]
+            },
+            "encoding": {
+              "type": "string",
+              "enum": [
+                "utf-8"
+              ]
+            },
+            "symlinks": {
+              "type": "string",
+              "enum": [
+                "deny",
+                "resolve-within-root"
+              ]
+            },
+            "network": {
+              "type": "string",
+              "enum": [
+                "deny",
+                "allow-pinned-only"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "entities": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "#/$defs/entity"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "#/$defs/edge"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 256,
+      "pattern": "^[a-z0-9][a-z0-9:_/\\-.]{1,254}[a-z0-9]$",
+      "description": "Stable identifier. Recommended prefixes: ent:, edge:. No whitespace."
+    },
+    "digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "alg",
+        "hex"
+      ],
+      "properties": {
+        "alg": {
+          "type": "string",
+          "enum": [
+            "sha256",
+            "blake3"
+          ]
+        },
+        "hex": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "name",
+        "attrs"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Entity type (file, module, endpoint, dataset, table, node, etc.)."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attrs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/attrValue"
+          },
+          "description": "Deterministic attributes. Values must be JSON types; avoid non-deterministic ordering by canonicalization."
+        },
+        "digests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/digest"
+          },
+          "description": "Optional content digests for entities such as files."
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "from",
+        "to",
+        "attrs"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Edge type (contains, imports, references, depends_on, defines, etc.)."
+        },
+        "from": {
+          "$ref": "#/$defs/id"
+        },
+        "to": {
+          "$ref": "#/$defs/id"
+        },
+        "attrs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/attrValue"
+          },
+          "description": "Deterministic edge attributes."
+        }
+      }
+    },
+    "attrValue": {
+      "description": "Allowed attribute value types for deterministic JSON.",
+      "oneOf": [
+        {
+          "type": "string",
+          "maxLength": 65535
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "maxItems": 100000,
+          "items": {
+            "$ref": "#/$defs/attrValue"
+          }
+        },
+        {
+          "type": "object",
+          "maxProperties": 100000,
+          "additionalProperties": {
+            "$ref": "#/$defs/attrValue"
+          }
+        }
+      ]
+    }
+  }
+}
