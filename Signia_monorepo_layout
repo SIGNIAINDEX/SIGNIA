@@ -1,0 +1,472 @@
+signia/
+├─ README.md
+├─ LICENSE
+├─ NOTICE
+├─ SECURITY.md
+├─ CODE_OF_CONDUCT.md
+├─ CONTRIBUTING.md
+├─ GOVERNANCE.md
+├─ CHANGELOG.md
+├─ VERSION
+├─ CITATION.cff
+├─ .gitignore
+├─ .gitattributes
+├─ .editorconfig
+├─ .env.example
+├─ Makefile
+├─ docker-compose.yml
+├─ turbo.json
+├─ package.json
+├─ pnpm-lock.yaml
+├─ pnpm-workspace.yaml
+├─ tsconfig.base.json
+├─ biome.json
+├─ rust-toolchain.toml
+├─ clippy.toml
+├─ deny.toml
+├─ audit.toml
+│
+├─ .github/
+│  ├─ FUNDING.yml
+│  ├─ dependabot.yml
+│  ├─ CODEOWNERS
+│  ├─ ISSUE_TEMPLATE/
+│  │  ├─ bug_report.yml
+│  │  ├─ feature_request.yml
+│  │  └─ question.yml
+│  ├─ workflows/
+│  │  ├─ ci.yml                       # lint + test + build (rust + ts)
+│  │  ├─ rust.yml                     # cargo fmt/clippy/test/deny/audit
+│  │  ├─ node.yml                     # pnpm lint/test/build
+│  │  ├─ solana-program.yml           # anchor build + test
+│  │  ├─ e2e.yml                      # docker-compose e2e compile→publish→query
+│  │  ├─ release.yml                  # tags + changelog + artifacts
+│  │  ├─ docker.yml                   # build/push images
+│  │  └─ codeql.yml
+│  └─ PULL_REQUEST_TEMPLATE.md
+│
+├─ docs/
+│  ├─ index.md
+│  ├─ overview.md
+│  ├─ architecture.md
+│  ├─ glossary.md
+│  ├─ faq.md
+│  ├─ roadmap.md
+│  ├─ security/
+│  │  ├─ threat-model.md
+│  │  ├─ trust-boundaries.md
+│  │  ├─ supply-chain.md
+│  │  └─ responsible-disclosure.md
+│  ├─ determinism/
+│  │  ├─ determinism-contract.md      # what "deterministic" means in SIGNIA
+│  │  ├─ canonicalization.md          # canonical json, ordering, normalization
+│  │  ├─ hashing.md                   # hashing strategy and domain separation
+│  │  └─ reproducible-builds.md
+│  ├─ schemas/
+│  │  ├─ schema-v1.md
+│  │  ├─ manifest-v1.md
+│  │  ├─ proof-v1.md
+│  │  └─ examples.md
+│  ├─ plugins/
+│  │  ├─ plugin-spec.md
+│  │  ├─ builtin-plugins.md
+│  │  ├─ sandboxing.md
+│  │  └─ writing-a-plugin.md
+│  ├─ onchain/
+│  │  ├─ registry-program.md
+│  │  ├─ accounts.md
+│  │  ├─ instructions.md
+│  │  ├─ pda-layout.md
+│  │  └─ upgrades.md
+│  ├─ api/
+│  │  ├─ openapi.yaml
+│  │  ├─ auth.md
+│  │  ├─ rate-limits.md
+│  │  └─ error-codes.md
+│  ├─ cli/
+│  │  ├─ installation.md
+│  │  ├─ usage.md
+│  │  ├─ config.md
+│  │  └─ recipes.md
+│  └─ console/
+│     ├─ overview.md
+│     ├─ interface-module.md
+│     └─ deployment.md
+│
+├─ schemas/
+│  ├─ v1/
+│  │  ├─ schema.json                  # JSON schema for StructureSchemaV1
+│  │  ├─ manifest.json                # JSON schema for ArtifactManifestV1
+│  │  ├─ proof.json                   # JSON schema for ProofV1 (merkle/proofs)
+│  │  └─ examples/
+│  │     ├─ repo.schema.json
+│  │     ├─ openapi.schema.json
+│  │     ├─ dataset.schema.json
+│  │     └─ workflow.schema.json
+│  └─ README.md
+│
+├─ crates/
+│  ├─ signia-core/
+│  │  ├─ Cargo.toml
+│  │  ├─ README.md
+│  │  └─ src/
+│  │     ├─ lib.rs
+│  │     ├─ version.rs                # schema versioning + compatibility
+│  │     ├─ errors.rs
+│  │     ├─ config.rs                 # pipeline config (determinism flags)
+│  │     ├─ model/
+│  │     │  ├─ mod.rs
+│  │     │  ├─ ir.rs                  # Structure IR (nodes/edges)
+│  │     │  ├─ node.rs
+│  │     │  ├─ edge.rs
+│  │     │  ├─ types.rs               # inferred types / constraints
+│  │     │  ├─ schema_v1.rs           # on-chain schema struct (v1)
+│  │     │  ├─ manifest_v1.rs         # artifact manifest struct (v1)
+│  │     │  ├─ proof_v1.rs            # proof struct (v1)
+│  │     │  └─ metadata.rs            # license, authors, refs, provenance
+│  │     ├─ pipeline/
+│  │     │  ├─ mod.rs
+│  │     │  ├─ stages.rs              # Parse → Infer → Compile → Verify
+│  │     │  ├─ parse.rs
+│  │     │  ├─ infer.rs
+│  │     │  ├─ compile.rs
+│  │     │  ├─ verify.rs
+│  │     │  ├─ context.rs             # execution context for deterministic runs
+│  │     │  └─ report.rs              # structured compile report
+│  │     ├─ determinism/
+│  │     │  ├─ mod.rs
+│  │     │  ├─ canonical_json.rs
+│  │     │  ├─ stable_sort.rs
+│  │     │  ├─ normalize_paths.rs
+│  │     │  ├─ normalize_text.rs      # newline normalization, trimming rules
+│  │     │  ├─ hashing.rs             # domain-separated hashing
+│  │     │  └─ merkle.rs              # merkle root over artifacts
+│  │     ├─ provenance/
+│  │     │  ├─ mod.rs
+│  │     │  ├─ source_ref.rs          # github refs, commit sha, tag, etc.
+│  │     │  ├─ build_env.rs           # tool versions, OS, compiler flags
+│  │     │  └─ attest.rs              # optional attestations (future)
+│  │     └─ diagnostics/
+│  │        ├─ mod.rs
+│  │        ├─ warnings.rs
+│  │        └─ hints.rs
+│  │
+│  ├─ signia-plugins/
+│  │  ├─ Cargo.toml
+│  │  ├─ README.md
+│  │  └─ src/
+│  │     ├─ lib.rs
+│  │     ├─ spec.rs                   # plugin trait + IO contracts
+│  │     ├─ registry.rs               # plugin discovery and routing
+│  │     ├─ sandbox.rs                # fs/network constraints
+│  │     ├─ context.rs                # controlled IO + caching
+│  │     ├─ builtin/
+│  │     │  ├─ mod.rs
+│  │     │  ├─ repo/
+│  │     │  │  ├─ mod.rs
+│  │     │  │  ├─ github_fetch.rs     # clone/fetch pinned ref
+│  │     │  │  ├─ tree_walk.rs        # deterministic traversal
+│  │     │  │  ├─ dep_graph.rs        # language-agnostic dep extraction
+│  │     │  │  └─ metadata.rs         # license/readme detection
+│  │     │  ├─ dataset/
+│  │     │  │  ├─ mod.rs
+│  │     │  │  ├─ infer_schema.rs     # dataset column/type inference
+│  │     │  │  └─ checksum.rs
+│  │     │  ├─ spec/
+│  │     │  │  ├─ mod.rs
+│  │     │  │  ├─ markdown.rs         # md structure → sections graph
+│  │     │  │  └─ link_graph.rs
+│  │     │  ├─ api/
+│  │     │  │  ├─ mod.rs
+│  │     │  │  ├─ openapi.rs          # OpenAPI → endpoints graph
+│  │     │  │  └─ normalize.rs
+│  │     │  ├─ workflow/
+│  │     │  │  ├─ mod.rs
+│  │     │  │  ├─ yaml.rs             # workflow yml → DAG
+│  │     │  │  └─ validate.rs
+│  │     │  └─ config/
+│  │     │     ├─ mod.rs
+│  │     │     ├─ json.rs
+│  │     │     └─ schema_detect.rs
+│  │     └─ tests/
+│  │        ├─ plugin_contract.rs
+│  │        └─ fixtures/
+│  │
+│  ├─ signia-store/
+│  │  ├─ Cargo.toml
+│  │  ├─ README.md
+│  │  └─ src/
+│  │     ├─ lib.rs
+│  │     ├─ kv/
+│  │     │  ├─ mod.rs
+│  │     │  ├─ memory.rs              # dev/test
+│  │     │  ├─ sqlite.rs              # default local persistence
+│  │     │  └─ migrations/
+│  │     │     ├─ 0001_init.sql
+│  │     │     └─ 0002_indexes.sql
+│  │     ├─ objects/
+│  │     │  ├─ mod.rs
+│  │     │  ├─ fs.rs                  # local artifact store
+│  │     │  ├─ s3.rs                  # optional
+│  │     │  └─ layout.rs              # deterministic object paths
+│  │     ├─ proofs/
+│  │     │  ├─ mod.rs
+│  │     │  ├─ merkle.rs
+│  │     │  └─ verify.rs
+│  │     └─ cache/
+│  │        ├─ mod.rs
+│  │        └─ content_addressed.rs
+│  │
+│  ├─ signia-api/
+│  │  ├─ Cargo.toml
+│  │  ├─ README.md
+│  │  └─ src/
+│  │     ├─ main.rs
+│  │     ├─ app.rs
+│  │     ├─ config.rs
+│  │     ├─ state.rs
+│  │     ├─ telemetry.rs
+│  │     ├─ middleware/
+│  │     │  ├─ mod.rs
+│  │     │  ├─ request_id.rs
+│  │     │  ├─ rate_limit.rs
+│  │     │  ├─ auth.rs
+│  │     │  └─ cors.rs
+│  │     ├─ routes/
+│  │     │  ├─ mod.rs
+│  │     │  ├─ health.rs
+│  │     │  ├─ compile.rs            # submit structure → returns schema/manifest/proof
+│  │     │  ├─ verify.rs             # verify schema/proof
+│  │     │  ├─ artifacts.rs          # list/get artifacts by hash
+│  │     │  ├─ plugins.rs            # list supported types and plugin versions
+│  │     │  └─ registry.rs           # publish/query on-chain registry
+│  │     ├─ dto/
+│  │     │  ├─ mod.rs
+│  │     │  ├─ requests.rs
+│  │     │  └─ responses.rs
+│  │     └─ error.rs
+│  │
+│  ├─ signia-cli/
+│  │  ├─ Cargo.toml
+│  │  ├─ README.md
+│  │  └─ src/
+│  │     ├─ main.rs
+│  │     ├─ args.rs
+│  │     ├─ output.rs                 # consistent CLI output formatting
+│  │     ├─ cmd/
+│  │     │  ├─ mod.rs
+│  │     │  ├─ compile.rs             # signia compile <input>
+│  │     │  ├─ verify.rs              # signia verify <schema/proof>
+│  │     │  ├─ publish.rs             # signia publish --devnet
+│  │     │  ├─ fetch.rs               # signia fetch <schema-hash>
+│  │     │  ├─ plugins.rs             # list plugins/types
+│  │     │  └─ doctor.rs              # environment checks
+│  │     ├─ io/
+│  │     │  ├─ mod.rs
+│  │     │  ├─ input.rs               # fs/url/github input resolver
+│  │     │  └─ export.rs              # export schema/manifest/proof bundle
+│  │     └─ solana/
+│  │        ├─ mod.rs
+│  │        ├─ client.rs
+│  │        └─ tx.rs
+│  │
+│  └─ signia-solana-client/
+│     ├─ Cargo.toml
+│     └─ src/
+│        ├─ lib.rs
+│        ├─ pda.rs
+│        ├─ registry_client.rs
+│        └─ constants.rs
+│
+├─ programs/
+│  └─ signia-registry/
+│     ├─ Anchor.toml
+│     ├─ Cargo.toml
+│     ├─ package.json                # anchor test deps
+│     ├─ src/
+│     │  ├─ lib.rs                   # entrypoint
+│     │  ├─ constants.rs
+│     │  ├─ errors.rs
+│     │  ├─ state/
+│     │  │  ├─ mod.rs
+│     │  │  ├─ registry.rs           # registry account
+│     │  │  ├─ entry.rs              # schema entry account
+│     │  │  └─ authority.rs          # optional authority config
+│     │  ├─ instructions/
+│     │  │  ├─ mod.rs
+│     │  │  ├─ init_registry.rs
+│     │  │  ├─ register_schema.rs    # schema hash + metadata
+│     │  │  ├─ publish_version.rs    # version pointer updates
+│     │  │  ├─ transfer_authority.rs
+│     │  │  └─ revoke_entry.rs
+│     │  └─ utils/
+│     │     ├─ mod.rs
+│     │     ├─ hashing.rs            # optional on-chain hash checks
+│     │     └─ validation.rs
+│     └─ tests/
+│        ├─ registry.spec.ts
+│        ├─ utils.ts
+│        └─ fixtures/
+│
+├─ sdk/
+│  ├─ ts/
+│  │  ├─ package.json
+│  │  ├─ README.md
+│  │  ├─ tsconfig.json
+│  │  └─ src/
+│  │     ├─ index.ts
+│  │     ├─ types/
+│  │     │  ├─ schema-v1.ts
+│  │     │  ├─ manifest-v1.ts
+│  │     │  └─ proof-v1.ts
+│  │     ├─ api/
+│  │     │  ├─ client.ts             # HTTP client for signia-api
+│  │     │  └─ endpoints.ts
+│  │     ├─ solana/
+│  │     │  ├─ registry.ts           # program interface helpers
+│  │     │  ├─ pda.ts
+│  │     │  └─ tx.ts
+│  │     └─ utils/
+│  │        ├─ hashing.ts
+│  │        └─ canonical-json.ts
+│  │
+│  └─ python/
+│     ├─ pyproject.toml
+│     ├─ README.md
+│     └─ signia/
+│        ├─ __init__.py
+│        ├─ api.py
+│        ├─ types.py
+│        └─ utils.py
+│
+├─ console/
+│  ├─ web/
+│  │  ├─ package.json
+│  │  ├─ README.md
+│  │  ├─ next.config.js
+│  │  ├─ tsconfig.json
+│  │  ├─ src/
+│  │  │  ├─ app/
+│  │  │  │  ├─ layout.tsx
+│  │  │  │  ├─ page.tsx
+│  │  │  │  ├─ compile/
+│  │  │  │  │  └─ page.tsx
+│  │  │  │  ├─ verify/
+│  │  │  │  │  └─ page.tsx
+│  │  │  │  ├─ registry/
+│  │  │  │  │  └─ page.tsx
+│  │  │  │  └─ interface/
+│  │  │  │     └─ page.tsx
+│  │  │  ├─ components/
+│  │  │  │  ├─ Header.tsx
+│  │  │  │  ├─ Footer.tsx
+│  │  │  │  ├─ CompileForm.tsx
+│  │  │  │  ├─ SchemaViewer.tsx
+│  │  │  │  ├─ ProofViewer.tsx
+│  │  │  │  ├─ ArtifactList.tsx
+│  │  │  │  └─ RegistryTable.tsx
+│  │  │  ├─ lib/
+│  │  │  │  ├─ api.ts
+│  │  │  │  ├─ solana.ts
+│  │  │  │  └─ config.ts
+│  │  │  └─ styles/
+│  │  └─ public/
+│  │
+│  └─ interface/
+│     ├─ package.json
+│     ├─ README.md
+│     └─ src/
+│        ├─ index.ts                 # runs the "Interface" service
+│        ├─ search/
+│        │  ├─ indexer.ts            # indexes docs + schemas + FAQ
+│        │  ├─ retriever.ts
+│        │  └─ ranker.ts
+│        ├─ sources/
+│        │  ├─ docs.ts
+│        │  ├─ schemas.ts
+│        │  └─ examples.ts
+│        ├─ handlers/
+│        │  ├─ how_to_deploy.ts
+│        │  ├─ what_is_signia.ts
+│        │  └─ troubleshooting.ts
+│        └─ prompts/
+│           ├─ system.md
+│           └─ style.md
+│
+├─ examples/
+│  ├─ README.md
+│  ├─ repo-github/
+│  │  ├─ README.md
+│  │  ├─ input.txt                   # sample repo URL + pinned ref
+│  │  ├─ run.sh                      # compile→verify→publish(devnet)
+│  │  └─ expected/
+│  │     ├─ schema.json
+│  │     ├─ manifest.json
+│  │     └─ proof.json
+│  ├─ openapi/
+│  │  ├─ petstore.yaml
+│  │  ├─ run.sh
+│  │  └─ expected/
+│  ├─ dataset/
+│  │  ├─ sample.csv
+│  │  ├─ run.sh
+│  │  └─ expected/
+│  └─ workflow/
+│     ├─ pipeline.yml
+│     ├─ run.sh
+│     └─ expected/
+│
+├─ tests/
+│  ├─ fixtures/
+│  │  ├─ repo_small/
+│  │  ├─ openapi_petstore/
+│  │  ├─ dataset_small/
+│  │  └─ workflow_small/
+│  ├─ integration/
+│  │  ├─ determinism_roundtrip.rs     # same input → same output byte-for-byte
+│  │  ├─ schema_validation.rs         # validate against schemas/v1/*.json
+│  │  ├─ proof_verification.rs
+│  │  ├─ api_compile_flow.rs
+│  │  └─ publish_devnet_flow.rs
+│  └─ e2e/
+│     ├─ docker_compose_up.rs
+│     └─ console_smoke.ts
+│
+├─ scripts/
+│  ├─ bootstrap.sh                    # install toolchains + deps
+│  ├─ build_all.sh
+│  ├─ lint_all.sh
+│  ├─ test_all.sh
+│  ├─ local_solana.sh                # solana-test-validator setup
+│  ├─ devnet_airdrop.sh
+│  ├─ anchor_build.sh
+│  ├─ generate_openapi.sh
+│  └─ release.sh
+│
+├─ infra/
+│  ├─ docker/
+│  │  ├─ api.Dockerfile
+│  │  ├─ console.Dockerfile
+│  │  ├─ interface.Dockerfile
+│  │  └─ runtime/
+│  │     ├─ entrypoint.sh
+│  │     └─ healthcheck.sh
+│  ├─ k8s/
+│  │  ├─ namespace.yaml
+│  │  ├─ api-deployment.yaml
+│  │  ├─ console-deployment.yaml
+│  │  ├─ interface-deployment.yaml
+│  │  └─ ingress.yaml
+│  └─ terraform/
+│     ├─ README.md
+│     ├─ modules/
+│     │  ├─ api/
+│     │  ├─ storage/
+│     │  └─ networking/
+│     └─ environments/
+│        ├─ dev/
+│        └─ prod/
+│
+└─ .devcontainer/
+   ├─ devcontainer.json
+   └─ Dockerfile
