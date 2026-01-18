@@ -1,0 +1,297 @@
+name: Rust
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "crates/**"
+      - "programs/**"
+      - "schemas/**"
+      - "docs/**"
+      - ".github/workflows/rust.yml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "deny.toml"
+      - "audit.toml"
+      - "clippy.toml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "crates/**"
+      - "programs/**"
+      - "schemas/**"
+      - "docs/**"
+      - ".github/workflows/rust.yml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "deny.toml"
+      - "audit.toml"
+      - "clippy.toml"
+  workflow_dispatch:
+
+concurrency:
+  group: rust-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  fmt:
+    name: rustfmt (check)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Format check (all crates)
+        run: |
+          set -euo pipefail
+          for d in crates/* programs/*; do
+            if [ -f "$d/Cargo.toml" ]; then
+              echo "==> rustfmt in $d"
+              (cd "$d" && cargo fmt --all --check)
+            fi
+          done
+
+  clippy:
+    name: clippy (deny warnings)
+    runs-on: ubuntu-latest
+    needs: [fmt]
+    strategy:
+      fail-fast: false
+      matrix:
+        crate:
+          - crates/signia-core
+          - crates/signia-plugins
+          - crates/signia-store
+          - crates/signia-api
+          - crates/signia-cli
+          - crates/signia-solana-client
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            ${{ matrix.crate }} -> target
+          cache-on-failure: true
+
+      - name: Clippy (all targets, all features)
+        working-directory: ${{ matrix.crate }}
+        run: |
+          set -euo pipefail
+          cargo clippy --all-targets --all-features --locked -- -D warnings
+
+  test:
+    name: tests
+    runs-on: ubuntu-latest
+    needs: [clippy]
+    strategy:
+      fail-fast: false
+      matrix:
+        crate:
+          - crates/signia-core
+          - crates/signia-plugins
+          - crates/signia-store
+          - crates/signia-api
+          - crates/signia-cli
+          - crates/signia-solana-client
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            ${{ matrix.crate }} -> target
+          cache-on-failure: true
+
+      - name: Run tests (locked)
+        working-directory: ${{ matrix.crate }}
+        run: |
+          set -euo pipefail
+          cargo test --all-features --locked
+
+  build:
+    name: build (release)
+    runs-on: ubuntu-latest
+    needs: [test]
+    strategy:
+      fail-fast: false
+      matrix:
+        crate:
+          - crates/signia-core
+          - crates/signia-plugins
+          - crates/signia-store
+          - crates/signia-api
+          - crates/signia-cli
+          - crates/signia-solana-client
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            ${{ matrix.crate }} -> target
+          cache-on-failure: true
+
+      - name: Build release (locked)
+        working-directory: ${{ matrix.crate }}
+        run: |
+          set -euo pipefail
+          cargo build --release --locked
+
+      - name: Upload binaries (CLI + API)
+        if: ${{ matrix.crate == 'crates/signia-cli' || matrix.crate == 'crates/signia-api' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.crate == 'crates/signia-cli' && 'signia-cli-linux' || 'signia-api-linux' }}
+          path: |
+            ${{ matrix.crate }}/target/release/*
+          if-no-files-found: warn
+
+  docs:
+    name: rustdoc (build)
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Build docs (locked, no deps docs)
+        run: |
+          set -euo pipefail
+          for d in crates/*; do
+            if [ -f "$d/Cargo.toml" ]; then
+              echo "==> rustdoc in $d"
+              (cd "$d" && cargo doc --no-deps --all-features --locked)
+            fi
+          done
+
+  supply-chain:
+    name: supply chain (deny/audit/outdated)
+    runs-on: ubuntu-latest
+    needs: [fmt]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: cargo-deny (policy)
+        run: |
+          set -euo pipefail
+          if [ -f "deny.toml" ]; then
+            cargo install cargo-deny --locked
+            cargo deny check
+          else
+            echo "deny.toml not found; skipping cargo-deny."
+          fi
+
+      - name: cargo-audit (vulnerabilities)
+        run: |
+          set -euo pipefail
+          if [ -f "audit.toml" ]; then
+            cargo install cargo-audit --locked
+            cargo audit
+          else
+            echo "audit.toml not found; skipping cargo-audit."
+          fi
+
+      - name: cargo-outdated (report only)
+        run: |
+          set -euo pipefail
+          cargo install cargo-outdated --locked
+          # Report only; do not fail the job on outdated dependencies.
+          cargo outdated || true
+
+  program-cargo:
+    name: on-chain program (Cargo checks only)
+    runs-on: ubuntu-latest
+    # This job runs only if the program exists.
+    if: ${{ hashFiles('programs/signia-registry/Cargo.toml') != '' }}
+    needs: [fmt]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Build program (Cargo)
+        working-directory: programs/signia-registry
+        run: |
+          set -euo pipefail
+          cargo build --locked
+
+      - name: Test program (Cargo)
+        working-directory: programs/signia-registry
+        run: |
+          set -euo pipefail
+          cargo test --locked
+
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    needs: [fmt, clippy, test, build, docs, supply-chain, program-cargo]
+    if: always()
+    steps:
+      - name: Results
+        run: |
+          echo "fmt: ${{ needs.fmt.result }}"
+          echo "clippy: ${{ needs.clippy.result }}"
+          echo "test: ${{ needs.test.result }}"
+          echo "build: ${{ needs.build.result }}"
+          echo "docs: ${{ needs.docs.result }}"
+          echo "supply-chain: ${{ needs.supply-chain.result }}"
+          echo "program-cargo: ${{ needs.program-cargo.result }}"
