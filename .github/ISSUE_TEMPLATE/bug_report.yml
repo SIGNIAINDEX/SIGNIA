@@ -1,0 +1,205 @@
+name: Bug report
+description: Report a reproducible problem in SIGNIA.
+title: "[Bug]: "
+labels:
+  - bug
+  - needs-triage
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+
+        **Before you submit**
+        - Search existing issues to avoid duplicates.
+        - Provide a minimal repro if possible.
+        - Remove secrets (API keys, private repo URLs, wallet keys, tokens).
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      description: Which part of the project is impacted?
+      multiple: true
+      options:
+        - CLI (crates/signia-cli)
+        - Core compiler (crates/signia-core)
+        - Plugins (crates/signia-plugins)
+        - Store (crates/signia-store)
+        - API service (crates/signia-api)
+        - Solana program: Registry (programs/signia-registry)
+        - TS SDK (sdk/ts)
+        - Python SDK (sdk/python)
+        - Console (console/web)
+        - Interface module (console/interface)
+        - Docs (docs/)
+        - Examples (examples/)
+        - CI / Workflows (.github/workflows)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version(s)
+      description: Provide the versions you are using. Prefer an exact git commit SHA or a release tag.
+      placeholder: "e.g. v0.1.0, or commit 1a2b3c4"
+    validations:
+      required: true
+
+  - type: input
+    id: solana_cluster
+    attributes:
+      label: Solana cluster (if applicable)
+      description: If the bug involves on-chain publishing/querying, specify the cluster.
+      placeholder: "e.g. localnet, devnet, testnet, mainnet-beta"
+    validations:
+      required: false
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A clear, concise description of the bug.
+      placeholder: "What happened?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+      placeholder: "Describe expected behavior."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened? Include errors, logs, or screenshots if relevant.
+      placeholder: "Describe actual behavior and paste logs below."
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro_steps
+    attributes:
+      label: Steps to reproduce
+      description: Provide step-by-step instructions to reproduce the bug.
+      placeholder: |
+        1. Run ...
+        2. Compile ...
+        3. Publish ...
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: minimal_repro
+    attributes:
+      label: Minimal reproduction (highly recommended)
+      description: |
+        Provide the smallest input that reproduces the issue.
+        - For repos: a public URL + pinned ref/commit.
+        - For files: attach or link a small sample.
+        - For schemas: paste schema/manifest/proof snippets (redact secrets).
+      placeholder: |
+        Example (repo input):
+        - URL: https://github.com/org/repo
+        - Ref: 1a2b3c4 (commit SHA)
+        - Command: signia compile --input github:https://github.com/org/repo#1a2b3c4
+    validations:
+      required: false
+
+  - type: dropdown
+    id: determinism
+    attributes:
+      label: Determinism impact
+      description: Does the issue affect deterministic output (same input → same output)?
+      multiple: false
+      options:
+        - Unknown
+        - No (output is stable)
+        - Yes (output differs between runs)
+    validations:
+      required: true
+
+  - type: textarea
+    id: determinism_details
+    attributes:
+      label: Determinism details (if applicable)
+      description: |
+        If outputs differ between runs, provide:
+        - the exact command(s) used
+        - the number of runs observed
+        - a diff of schema/manifest/proof (or hashes)
+        - environment info (OS, file system, toolchain)
+      placeholder: |
+        - Command:
+        - Runs observed:
+        - Output hash A:
+        - Output hash B:
+        - Diff:
+    validations:
+      required: false
+
+  - type: textarea
+    id: command_output
+    attributes:
+      label: Command output / logs
+      description: Paste relevant logs. Use code blocks. Remove secrets.
+      render: shell
+      placeholder: |
+        ```bash
+        signia compile ...
+        ...
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Provide system/tooling information.
+      render: text
+      placeholder: |
+        - OS:
+        - CPU arch:
+        - Rust version (rustc -V):
+        - Cargo version:
+        - Node version (node -v):
+        - pnpm version (pnpm -v):
+        - Solana CLI version (solana --version):
+        - Anchor version (anchor --version):
+        - Docker version (if used):
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Confirm the following before submitting.
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I can reproduce this issue consistently.
+          required: false
+        - label: I included enough information for someone else to reproduce the issue.
+          required: true
+        - label: I removed secrets and private information from logs and attachments.
+          required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Anything else that might help triage (links, PRs, related issues).
+      placeholder: "Add links or context here."
+    validations:
+      required: false
