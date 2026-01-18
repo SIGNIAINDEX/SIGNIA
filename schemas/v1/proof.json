@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://signia.dev/schemas/v1/proof.json",
+  "title": "SIGNIA Proof v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "hash",
+    "root",
+    "leaves",
+    "tree",
+    "manifestRef"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "v1"
+    },
+    "hash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "alg",
+        "domain"
+      ],
+      "properties": {
+        "alg": {
+          "type": "string",
+          "enum": [
+            "sha256",
+            "blake3"
+          ]
+        },
+        "domain": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Domain separation label, e.g., 'signia.v1.merkle'."
+        }
+      }
+    },
+    "root": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Merkle root over canonical leaf set."
+    },
+    "manifestRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifestHash",
+        "schemaHash"
+      ],
+      "properties": {
+        "manifestHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "schemaHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "leaves": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Leaf set included in the Merkle tree. Order is canonical (lexicographic by key).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "sha256"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "description": "Canonical leaf key, e.g., 'file:schema.json' or 'digest:schemaHash'."
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "Leaf digest (sha256 of canonical leaf payload)."
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Optional payload size hint."
+          }
+        }
+      }
+    },
+    "tree": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "height",
+        "nodeCount",
+        "leafCount"
+      ],
+      "properties": {
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "nodeCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "leafCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "balanced": {
+          "type": "boolean"
+        }
+      }
+    },
+    "inclusion": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional inclusion proofs for selected keys to support lightweight verification.",
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "key",
+              "leaf",
+              "path"
+            ],
+            "properties": {
+              "key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "leaf": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "path": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "side",
+                    "hash"
+                  ],
+                  "properties": {
+                    "side": {
+                      "type": "string",
+                      "enum": [
+                        "L",
+                        "R"
+                      ]
+                    },
+                    "hash": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
