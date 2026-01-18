@@ -1,0 +1,195 @@
+name: Node
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - "tsconfig*.json"
+      - "biome.json"
+      - ".github/workflows/node.yml"
+      - "console/**"
+      - "sdk/**"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - "tsconfig*.json"
+      - "biome.json"
+      - ".github/workflows/node.yml"
+      - "console/**"
+      - "sdk/**"
+  workflow_dispatch:
+
+concurrency:
+  group: node-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9"
+  CI: "true"
+
+jobs:
+  install-and-check:
+    name: Install, lint, test, build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - "."                 # workspace root (tooling/scripts)
+          - "console/web"       # Next.js console
+          - "console/interface" # Interface service
+          - "sdk/ts"            # TypeScript SDK
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Verify lockfile exists
+        run: |
+          set -euo pipefail
+          test -f pnpm-lock.yaml
+
+      - name: Install dependencies (frozen lockfile)
+        working-directory: ${{ matrix.project }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Print package info
+        working-directory: ${{ matrix.project }}
+        run: |
+          set -euo pipefail
+          node -v
+          pnpm -v
+          cat package.json | head -n 80
+
+      - name: Typecheck (if script exists)
+        working-directory: ${{ matrix.project }}
+        run: |
+          set -euo pipefail
+          if pnpm -s run | grep -qE "^(typecheck|check:types)"; then
+            if pnpm -s run | grep -q "^typecheck"; then
+              pnpm run typecheck
+            else
+              pnpm run check:types
+            fi
+          else
+            echo "No typecheck script found; skipping."
+          fi
+
+      - name: Lint (if script exists)
+        working-directory: ${{ matrix.project }}
+        run: |
+          set -euo pipefail
+          if pnpm -s run | grep -q "^lint"; then
+            pnpm run lint
+          else
+            echo "No lint script found; skipping."
+          fi
+
+      - name: Test (if script exists)
+        working-directory: ${{ matrix.project }}
+        run: |
+          set -euo pipefail
+          if pnpm -s run | grep -q "^test"; then
+            pnpm run test
+          else
+            echo "No test script found; skipping."
+          fi
+
+      - name: Build (if script exists)
+        working-directory: ${{ matrix.project }}
+        run: |
+          set -euo pipefail
+          if pnpm -s run | grep -q "^build"; then
+            pnpm run build
+          else
+            echo "No build script found; skipping."
+          fi
+
+      - name: Upload build artifacts (console/web)
+        if: ${{ matrix.project == 'console/web' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: console-web-build
+          path: |
+            console/web/.next
+            console/web/out
+          if-no-files-found: warn
+
+      - name: Upload build artifacts (sdk/ts)
+        if: ${{ matrix.project == 'sdk/ts' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-ts-dist
+          path: |
+            sdk/ts/dist
+          if-no-files-found: warn
+
+  workspace-integrity:
+    name: Workspace integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install (root, frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Ensure no uncommitted lockfile changes
+        run: |
+          set -euo pipefail
+          git status --porcelain
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Working tree is dirty. Ensure lockfiles and generated files are committed."
+            exit 1
+          fi
+
+      - name: Run workspace scripts (optional)
+        run: |
+          set -euo pipefail
+          if pnpm -s run | grep -q "^lint"; then pnpm run lint; else echo "No root lint script."; fi
+          if pnpm -s run | grep -q "^test"; then pnpm run test; else echo "No root test script."; fi
+          if pnpm -s run | grep -q "^build"; then pnpm run build; else echo "No root build script."; fi
+
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    needs: [install-and-check, workspace-integrity]
+    if: always()
+    steps:
+      - name: Results
+        run: |
+          echo "install-and-check: ${{ needs.install-and-check.result }}"
+          echo "workspace-integrity: ${{ needs.workspace-integrity.result }}"
