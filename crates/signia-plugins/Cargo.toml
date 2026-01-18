@@ -1,0 +1,42 @@
+[package]
+name = "signia-plugins"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Plugin system and built-in plugins for SIGNIA"
+repository = "https://github.com/signia-project/signia"
+homepage = "https://signia.dev"
+documentation = "https://docs.signia.dev"
+readme = "README.md"
+keywords = ["solana", "determinism", "compiler", "plugins", "signia"]
+categories = ["development-tools", "compilers", "data-structures"]
+
+[features]
+default = ["builtin"]
+builtin = []
+wasm = ["wasmtime", "wasmtime-wasi"]
+
+[dependencies]
+signia-core = { path = "../signia-core", version = "0.1.0", default-features = false }
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Optional WASM sandbox support
+wasmtime = { version = "18.0", optional = true }
+wasmtime-wasi = { version = "18.0", optional = true }
+
+[dev-dependencies]
+tempfile = "3.10"
+assert_cmd = "2.0"
+
+[lib]
+name = "signia_plugins"
+path = "src/lib.rs"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
