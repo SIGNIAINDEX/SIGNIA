@@ -1,0 +1,208 @@
+{
+  "version": "v1",
+  "kind": "workflow",
+  "meta": {
+    "name": "example-ai-workflow",
+    "description": "Example SIGNIA schema for an AI/automation workflow with steps, inputs, outputs, and dependencies.",
+    "labels": {
+      "category": "ai-workflow",
+      "engine": "generic"
+    },
+    "createdAt": "1970-01-01T00:00:00Z",
+    "source": {
+      "type": "file",
+      "locator": "artifact:/workflows/example.yaml",
+      "contentHash": "3333333333333333333333333333333333333333333333333333333333333333"
+    },
+    "normalization": {
+      "policyVersion": "v1",
+      "pathRoot": "artifact:/",
+      "newline": "lf",
+      "encoding": "utf-8",
+      "symlinks": "deny",
+      "network": "deny"
+    }
+  },
+  "entities": [
+    {
+      "id": "ent:workflow:root",
+      "type": "workflow",
+      "name": "example-ai-workflow",
+      "attrs": {
+        "version": "1.0.0",
+        "runtime": "container",
+        "entry": "step:ingest"
+      }
+    },
+    {
+      "id": "ent:step:ingest",
+      "type": "step",
+      "name": "ingest",
+      "attrs": {
+        "kind": "input",
+        "inputs": [],
+        "outputs": [
+          "dataset:raw"
+        ],
+        "image": "python:3.11-slim"
+      }
+    },
+    {
+      "id": "ent:step:preprocess",
+      "type": "step",
+      "name": "preprocess",
+      "attrs": {
+        "kind": "transform",
+        "inputs": [
+          "dataset:raw"
+        ],
+        "outputs": [
+          "dataset:clean"
+        ],
+        "image": "python:3.11-slim"
+      }
+    },
+    {
+      "id": "ent:step:train",
+      "type": "step",
+      "name": "train",
+      "attrs": {
+        "kind": "compute",
+        "inputs": [
+          "dataset:clean"
+        ],
+        "outputs": [
+          "model:v1"
+        ],
+        "resources": {
+          "cpu": 4,
+          "memoryGb": 16,
+          "gpu": 1
+        }
+      }
+    },
+    {
+      "id": "ent:step:evaluate",
+      "type": "step",
+      "name": "evaluate",
+      "attrs": {
+        "kind": "compute",
+        "inputs": [
+          "model:v1",
+          "dataset:clean"
+        ],
+        "outputs": [
+          "report:metrics"
+        ]
+      }
+    },
+    {
+      "id": "ent:artifact:dataset:raw",
+      "type": "artifact",
+      "name": "dataset:raw",
+      "attrs": {
+        "artifactType": "dataset",
+        "format": "parquet"
+      }
+    },
+    {
+      "id": "ent:artifact:dataset:clean",
+      "type": "artifact",
+      "name": "dataset:clean",
+      "attrs": {
+        "artifactType": "dataset",
+        "format": "parquet"
+      }
+    },
+    {
+      "id": "ent:artifact:model:v1",
+      "type": "artifact",
+      "name": "model:v1",
+      "attrs": {
+        "artifactType": "model",
+        "framework": "pytorch"
+      }
+    },
+    {
+      "id": "ent:artifact:report:metrics",
+      "type": "artifact",
+      "name": "report:metrics",
+      "attrs": {
+        "artifactType": "report",
+        "format": "json"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:flow:ingest->preprocess",
+      "type": "flow",
+      "from": "ent:step:ingest",
+      "to": "ent:step:preprocess",
+      "attrs": {}
+    },
+    {
+      "id": "edge:flow:preprocess->train",
+      "type": "flow",
+      "from": "ent:step:preprocess",
+      "to": "ent:step:train",
+      "attrs": {}
+    },
+    {
+      "id": "edge:flow:train->evaluate",
+      "type": "flow",
+      "from": "ent:step:train",
+      "to": "ent:step:evaluate",
+      "attrs": {}
+    },
+    {
+      "id": "edge:produces:ingest:raw",
+      "type": "produces",
+      "from": "ent:step:ingest",
+      "to": "ent:artifact:dataset:raw",
+      "attrs": {}
+    },
+    {
+      "id": "edge:produces:preprocess:clean",
+      "type": "produces",
+      "from": "ent:step:preprocess",
+      "to": "ent:artifact:dataset:clean",
+      "attrs": {}
+    },
+    {
+      "id": "edge:produces:train:model",
+      "type": "produces",
+      "from": "ent:step:train",
+      "to": "ent:artifact:model:v1",
+      "attrs": {}
+    },
+    {
+      "id": "edge:produces:evaluate:report",
+      "type": "produces",
+      "from": "ent:step:evaluate",
+      "to": "ent:artifact:report:metrics",
+      "attrs": {}
+    },
+    {
+      "id": "edge:consumes:preprocess:raw",
+      "type": "consumes",
+      "from": "ent:step:preprocess",
+      "to": "ent:artifact:dataset:raw",
+      "attrs": {}
+    },
+    {
+      "id": "edge:consumes:train:clean",
+      "type": "consumes",
+      "from": "ent:step:train",
+      "to": "ent:artifact:dataset:clean",
+      "attrs": {}
+    },
+    {
+      "id": "edge:consumes:evaluate:inputs",
+      "type": "consumes",
+      "from": "ent:step:evaluate",
+      "to": "ent:artifact:dataset:clean",
+      "attrs": {}
+    }
+  ]
+}
