@@ -1,0 +1,28 @@
+[package]
+name = "signia-solana-client"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Solana client utilities for SIGNIA registry interactions (PDA, instructions, RPC wrappers)"
+repository = "https://github.com/your-org/signia"
+readme = "README.md"
+
+[dependencies]
+ bincode = "1"
+anyhow = "1"
+thiserror = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+hex = "0.4"
+bs58 = "0.5"
+
+solana-sdk = "2.0.14"
+solana-client = "2.0.14"
+solana-program = "2.0.14"
+
+# Workspace crates
+signia-core = { path = "../signia-core" }
+
+[dev-dependencies]
+rand = "0.8"
