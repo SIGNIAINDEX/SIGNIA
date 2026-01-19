@@ -20,7 +20,7 @@
 //! - Canonical hashing must never rely on default `serde_json::to_vec` because it is not a
 //!   canonical form (ordering/whitespace are not guaranteed). Use `crate::canonical` instead.
 
-pub mod v1;
+// pub mod v1;
 
 pub use v1::{
     EdgeV1, EntityV1, ManifestV1, ProofV1, SchemaV1,
