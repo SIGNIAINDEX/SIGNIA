@@ -12,7 +12,7 @@ pub mod errors;
 pub mod hash;
 pub mod merkle;
 pub mod model;
-pub mod path;
+// pub mod path;
 
 pub use crate::errors::{SigniaError, SigniaResult};
 
