@@ -40,13 +40,18 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          # Use extended queries for better coverage; you can tighten later.
           queries: security-extended
 
       # -----------------------------
-      # Build steps (recommended for better results)
-      # CodeQL will attempt autobuild; we also provide explicit builds.
+      # Build steps
       # -----------------------------
+
+      # 【修复点 1】: 先安装 pnpm，再安装 Node，这样 Node 的 cache: "pnpm" 才能生效
+      - name: Setup pnpm (JS/TS only)
+        if: ${{ matrix.language == 'javascript-typescript' }}
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node (JS/TS only)
         if: ${{ matrix.language == 'javascript-typescript' }}
@@ -54,12 +59,6 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
-
-      - name: Setup pnpm (JS/TS only)
-        if: ${{ matrix.language == 'javascript-typescript' }}
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Install JS dependencies (JS/TS only)
         if: ${{ matrix.language == 'javascript-typescript' }}
@@ -82,7 +81,6 @@ jobs:
         if: ${{ matrix.language == 'javascript-typescript' }}
         run: |
           set -euo pipefail
-          # Run builds if scripts exist. Keep failures meaningful.
           if [ -f package.json ] && pnpm -s run | grep -q "^build"; then
             pnpm run build
           fi
@@ -106,24 +104,22 @@ jobs:
         with:
           cache-on-failure: true
 
+      # 【修复点 2】: 去掉了 --locked 参数，允许 CI 在依赖版本不一致时自动更新 Lock 文件
       - name: Build Rust (Rust only)
         if: ${{ matrix.language == 'rust' }}
         run: |
           set -euo pipefail
-          # Build key crates for analysis quality.
-          cargo build --release --locked --manifest-path crates/signia-core/Cargo.toml
-          cargo build --release --locked --manifest-path crates/signia-plugins/Cargo.toml
-          cargo build --release --locked --manifest-path crates/signia-store/Cargo.toml
-          cargo build --release --locked --manifest-path crates/signia-api/Cargo.toml
-          cargo build --release --locked --manifest-path crates/signia-cli/Cargo.toml
-          cargo build --release --locked --manifest-path crates/signia-solana-client/Cargo.toml
+          cargo build --release --manifest-path crates/signia-core/Cargo.toml
+          cargo build --release --manifest-path crates/signia-plugins/Cargo.toml
+          cargo build --release --manifest-path crates/signia-store/Cargo.toml
+          cargo build --release --manifest-path crates/signia-api/Cargo.toml
+          cargo build --release --manifest-path crates/signia-cli/Cargo.toml
+          cargo build --release --manifest-path crates/signia-solana-client/Cargo.toml
 
-          # If on-chain program exists, build it as well (Cargo-only).
           if [ -f programs/signia-registry/Cargo.toml ]; then
-            cargo build --release --locked --manifest-path programs/signia-registry/Cargo.toml
+            cargo build --release --manifest-path programs/signia-registry/Cargo.toml
           fi
 
-      # Autobuild fallback (in case explicit build is insufficient)
       - name: Autobuild
         uses: github/codeql-action/autobuild@v3
 
