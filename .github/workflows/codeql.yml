@@ -20,7 +20,7 @@ permissions:
 
 env:
   NODE_VERSION: "20"
-  PNPM_VERSION: "9"
+  PNPM_VERSION: "9.15.1"
 
 jobs:
   analyze:
@@ -44,45 +44,61 @@ jobs:
           queries: security-extended
 
       # -----------------------------
-      # Build steps (recommended for better results)
-      # CodeQL will attempt autobuild; we also provide explicit builds.
+      # JS/TS toolchain + caching
       # -----------------------------
-
       - name: Setup Node (JS/TS only)
         if: ${{ matrix.language == 'javascript-typescript' }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
 
       - name: Setup pnpm (JS/TS only)
         if: ${{ matrix.language == 'javascript-typescript' }}
         uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Get pnpm store path (JS/TS only)
+        if: ${{ matrix.language == 'javascript-typescript' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "PNPM_STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+
+      - name: Cache pnpm store (JS/TS only)
+        if: ${{ matrix.language == 'javascript-typescript' }}
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PNPM_STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
 
       - name: Install JS dependencies (JS/TS only)
         if: ${{ matrix.language == 'javascript-typescript' }}
+        shell: bash
         run: |
           set -euo pipefail
           if [ -f package.json ]; then
             pnpm install --frozen-lockfile || pnpm install
           fi
           if [ -f console/web/package.json ]; then
-            (cd console/web && pnpm install --frozen-lockfile || pnpm install)
+            (cd console/web && (pnpm install --frozen-lockfile || pnpm install))
           fi
           if [ -f console/interface/package.json ]; then
-            (cd console/interface && pnpm install --frozen-lockfile || pnpm install)
+            (cd console/interface && (pnpm install --frozen-lockfile || pnpm install))
           fi
           if [ -f sdk/ts/package.json ]; then
-            (cd sdk/ts && pnpm install --frozen-lockfile || pnpm install)
+            (cd sdk/ts && (pnpm install --frozen-lockfile || pnpm install))
           fi
 
       - name: Build JS/TS (JS/TS only)
         if: ${{ matrix.language == 'javascript-typescript' }}
+        shell: bash
         run: |
           set -euo pipefail
-          # Run builds if scripts exist. Keep failures meaningful.
+          # Run builds if scripts exist.
           if [ -f package.json ] && pnpm -s run | grep -q "^build"; then
             pnpm run build
           fi
@@ -96,6 +112,9 @@ jobs:
             (cd sdk/ts && pnpm run build)
           fi
 
+      # -----------------------------
+      # Rust toolchain + caching
+      # -----------------------------
       - name: Install Rust toolchain (Rust only)
         if: ${{ matrix.language == 'rust' }}
         uses: dtolnay/rust-toolchain@stable
@@ -108,6 +127,7 @@ jobs:
 
       - name: Build Rust (Rust only)
         if: ${{ matrix.language == 'rust' }}
+        shell: bash
         run: |
           set -euo pipefail
           # Build key crates for analysis quality.
@@ -123,8 +143,13 @@ jobs:
             cargo build --release --locked --manifest-path programs/signia-registry/Cargo.toml
           fi
 
-      # Autobuild fallback (in case explicit build is insufficient)
+      # -----------------------------
+      # Autobuild fallback
+      # - Keep for Rust (sometimes finds additional build commands)
+      # - Skip for JS/TS since we explicitly build it above
+      # -----------------------------
       - name: Autobuild
+        if: ${{ matrix.language == 'rust' }}
         uses: github/codeql-action/autobuild@v3
 
       - name: Perform CodeQL Analysis
