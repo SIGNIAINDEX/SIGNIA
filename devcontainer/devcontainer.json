@@ -1,0 +1,50 @@
+{
+  "name": "SIGNIA Dev",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
+        "rust-analyzer.checkOnSave.command": "clippy",
+        "files.eol": "\n"
+      },
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "ms-azuretools.vscode-docker",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    }
+  },
+  "forwardPorts": [
+    3000,
+    7071,
+    8787
+  ],
+  "portsAttributes": {
+    "3000": {
+      "label": "Console Web (Next.js)"
+    },
+    "7071": {
+      "label": "Interface Service"
+    },
+    "8787": {
+      "label": "Signia API"
+    }
+  },
+  "postCreateCommand": "bash scripts/bootstrap.sh && bash scripts/build_all.sh",
+  "postStartCommand": "echo 'SIGNIA devcontainer ready. Run: bash scripts/test_all.sh'"
+}
