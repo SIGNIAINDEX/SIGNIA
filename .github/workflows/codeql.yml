@@ -2,11 +2,11 @@ name: CodeQL
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "SIGNIAINDEX-upload-1"] # 确保你的分支也能触发
   pull_request:
     branches: ["main"]
   schedule:
-    - cron: "0 3 * * 1" # Mondays 03:00 UTC
+    - cron: "0 3 * * 1"
   workflow_dispatch:
 
 concurrency:
@@ -42,11 +42,7 @@ jobs:
           languages: ${{ matrix.language }}
           queries: security-extended
 
-      # -----------------------------
-      # Build steps
-      # -----------------------------
-
-      # 【修复点 1】: 先安装 pnpm，再安装 Node，这样 Node 的 cache: "pnpm" 才能生效
+      # --- JS/TS 修复部分 ---
       - name: Setup pnpm (JS/TS only)
         if: ${{ matrix.language == 'javascript-typescript' }}
         uses: pnpm/action-setup@v4
@@ -58,23 +54,25 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+          # 【修改点】：删除了 cache: "pnpm"，避免因为找不到 lock 文件报错
 
       - name: Install JS dependencies (JS/TS only)
         if: ${{ matrix.language == 'javascript-typescript' }}
         run: |
           set -euo pipefail
+          # 尝试安装依赖，如果没有 lockfile 就自动生成一个
           if [ -f package.json ]; then
-            pnpm install --frozen-lockfile || pnpm install
+            pnpm install
           fi
+          # 遍历子目录安装 (Monorepo)
           if [ -f console/web/package.json ]; then
-            (cd console/web && pnpm install --frozen-lockfile || pnpm install)
+            (cd console/web && pnpm install)
           fi
           if [ -f console/interface/package.json ]; then
-            (cd console/interface && pnpm install --frozen-lockfile || pnpm install)
+            (cd console/interface && pnpm install)
           fi
           if [ -f sdk/ts/package.json ]; then
-            (cd sdk/ts && pnpm install --frozen-lockfile || pnpm install)
+            (cd sdk/ts && pnpm install)
           fi
 
       - name: Build JS/TS (JS/TS only)
@@ -94,6 +92,7 @@ jobs:
             (cd sdk/ts && pnpm run build)
           fi
 
+      # --- Rust 修复部分 ---
       - name: Install Rust toolchain (Rust only)
         if: ${{ matrix.language == 'rust' }}
         uses: dtolnay/rust-toolchain@stable
@@ -104,11 +103,11 @@ jobs:
         with:
           cache-on-failure: true
 
-      # 【修复点 2】: 去掉了 --locked 参数，允许 CI 在依赖版本不一致时自动更新 Lock 文件
       - name: Build Rust (Rust only)
         if: ${{ matrix.language == 'rust' }}
         run: |
           set -euo pipefail
+          # 【关键】：去掉了 --locked，允许 CI 自动更新 lock 文件
           cargo build --release --manifest-path crates/signia-core/Cargo.toml
           cargo build --release --manifest-path crates/signia-plugins/Cargo.toml
           cargo build --release --manifest-path crates/signia-store/Cargo.toml
