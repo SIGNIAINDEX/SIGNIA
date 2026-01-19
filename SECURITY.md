@@ -11,7 +11,7 @@ Please do not open public issues for suspected security vulnerabilities.
 Use GitHub Security Advisories (preferred) or email a dedicated mailbox.
 
 - GitHub Security Advisories: "Report a vulnerability" in the Security tab
-- Email: security@signia.example (replace before enabling)
+- Email: security@signialab.org (replace before enabling)
 
 Include:
 - Affected component(s) and commit SHA
