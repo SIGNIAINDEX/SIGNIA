@@ -30,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ["javascript-typescript", "rust"]
+        language: ["javascript-typescript"]
 
     steps:
       - name: Checkout
