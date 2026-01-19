@@ -5,8 +5,6 @@
 **SIGNIA is coming to Solana.**  
 A structure-level on-chain system for compiling real-world structures into verifiable forms.
 
-> **Contract Address:** **TBA** (no token has been issued)
-
 <!-- ====== Primary Links (Green Theme Buttons) ====== -->
 <p align="center">
   <a href="https://signialab.org/">
