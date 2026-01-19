@@ -1,0 +1,11 @@
+version: 1
+name: workflow-small
+steps:
+  - id: fetch
+    kind: http_get
+    with:
+      url: https://example.com/data.json
+  - id: publish
+    kind: signia_publish
+    with:
+      target: registry
