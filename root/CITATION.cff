@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use SIGNIA in academic work, please cite it as below."
+title: "SIGNIA"
+type: software
+authors:
+  - name: "SIGNIA Contributors"
+repository-code: "https://github.com/SIGNIAINDEX/SIGNIA"
+license: "Apache-2.0"
+version: "0.1.0"
+date-released: "2026-01-19"

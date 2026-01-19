@@ -1,0 +1,18 @@
+[advisories]
+db-urls = ["https://github.com/RustSec/advisory-db"]
+unmaintained = "warn"
+yanked = "warn"
+unsound = "deny"
+
+[licenses]
+unlicensed = "deny"
+copyleft = "deny"
+allow = ["Apache-2.0", "MIT", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Zlib"]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "warn"
+unknown-git = "warn"
