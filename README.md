@@ -5,6 +5,8 @@
 **SIGNIA is coming to Solana.**  
 A structure-level on-chain system for compiling real-world structures into verifiable forms.
 
+**CA: 2rWMKqxBwMbgjc5vKa1U72Mt4ut9Pfcm7oZbHGaxpump**
+
 <!-- ====== Primary Links (Green Theme Buttons) ====== -->
 <p align="center">
   <a href="https://signialab.org/">
