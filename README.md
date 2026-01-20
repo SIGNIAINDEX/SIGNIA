@@ -11,7 +11,7 @@ A structure-level on-chain system for compiling real-world structures into verif
     <img alt="Website" src="https://img.shields.io/badge/Website-signialab.org-00C853?style=for-the-badge&logo=googlechrome&logoColor=white">
   </a>
   <a href="https://x.com/MARKEDMANXX">
-    <img alt="X (Twitter)" src="https://img.shields.io/badge/X-@SIGNIAINDEX-00C853?style=for-the-badge&logo=x&logoColor=white">
+    <img alt="X (Twitter)" src="https://img.shields.io/badge/X-@MARKEDMANXX-00C853?style=for-the-badge&logo=x&logoColor=white">
   </a>
 </p>
 
