@@ -5,18 +5,13 @@
 **SIGNIA is coming to Solana.**  
 A structure-level on-chain system for compiling real-world structures into verifiable forms.
 
-**CA: 2rWMKqxBwMbgjc5vKa1U72Mt4ut9Pfcm7oZbHGaxpump**
-
 <!-- ====== Primary Links (Green Theme Buttons) ====== -->
 <p align="center">
   <a href="https://signialab.org/">
     <img alt="Website" src="https://img.shields.io/badge/Website-signialab.org-00C853?style=for-the-badge&logo=googlechrome&logoColor=white">
   </a>
-  <a href="https://x.com/SIGNIAINDEX">
+  <a href="https://x.com/MARKEDMANXX">
     <img alt="X (Twitter)" src="https://img.shields.io/badge/X-@SIGNIAINDEX-00C853?style=for-the-badge&logo=x&logoColor=white">
-  </a>
-  <a href="https://x.com/i/communities/2012892721191551236">
-    <img alt="X Community" src="https://img.shields.io/badge/Community-Join-00C853?style=for-the-badge&logo=x&logoColor=white">
   </a>
 </p>
 
