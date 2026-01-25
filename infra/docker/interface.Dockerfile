@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:20-bookworm AS builder
+FROM node:25-bookworm AS builder
 WORKDIR /app
 
 COPY console/interface/package.json console/interface/package-lock.json* console/interface/npm-shrinkwrap.json* ./console/interface/
@@ -9,7 +9,7 @@ RUN cd console/interface && (npm ci || npm install)
 COPY console/interface ./console/interface
 RUN cd console/interface && npm run build
 
-FROM node:20-bookworm-slim AS runtime
+FROM node:25-bookworm-slim AS runtime
 WORKDIR /srv
 ENV NODE_ENV=production
 ENV PORT=7071
