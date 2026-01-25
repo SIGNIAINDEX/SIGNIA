@@ -8,21 +8,21 @@ repository = "https://github.com/your-org/signia"
 readme = "README.md"
 
 [dependencies]
- bincode = "1"
+ bincode = "3"
 anyhow = "1"
-thiserror = "1"
+thiserror = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
 hex = "0.4"
 bs58 = "0.5"
 
-solana-sdk = "2.0.14"
-solana-client = "2.0.14"
-solana-program = "2.0.14"
+solana-sdk = "3.0.0"
+solana-client = "3.1.7"
+solana-program = "3.0.0"
 
 # Workspace crates
 signia-core = { path = "../signia-core" }
 
 [dev-dependencies]
-rand = "0.8"
+rand = "0.9"
