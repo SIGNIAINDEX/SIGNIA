@@ -13,7 +13,7 @@ engine = []
 
 [dependencies]
 anyhow = "1"
-thiserror = "1"
+thiserror = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 time = { version = "0.3", features = ["std"] }
@@ -21,9 +21,9 @@ uuid = { version = "1", features = ["v4"] }
 sha2 = "0.10"
 hex = "0.4"
 
-axum = { version = "0.7", features = ["macros", "json"] }
+axum = { version = "0.8", features = ["macros", "json"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal"] }
-tower = "0.4"
+tower = "0.5"
 tower-http = { version = "0.6", features = ["cors", "trace", "request-id"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
@@ -34,5 +34,5 @@ signia-plugins = { path = "../signia-plugins" }
 signia-store = { path = "../signia-store" }
 
 [dev-dependencies]
-reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+reqwest = { version = "0.13", features = ["json", "rustls-tls"] }
 tempfile = "3"
