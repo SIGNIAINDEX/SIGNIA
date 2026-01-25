@@ -24,13 +24,13 @@ parallel = ["dep:rayon"]
 
 [dependencies]
 anyhow = "1.0"
-thiserror = "1.0"
+thiserror = "2.0"
 
 serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1.0", optional = true }
 
 # Canonicalization helpers
-itertools = { version = "0.12", optional = true }
+itertools = { version = "0.14", optional = true }
 
 # Hashing
 sha2 = { version = "0.10", optional = true }
