@@ -1,0 +1,23 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+  .:
+    devDependencies:
+      '@biomejs/biome':
+        specifier: ^1.9.4
+        version: 1.9.4
+      turbo:
+        specifier: ^2.2.3
+        version: 2.2.3
+      typescript:
+        specifier: ^5.6.3
+        version: 5.6.3
+
+packages:
+  '@biomejs/biome@1.9.4': {}
+  'turbo@2.2.3': {}
+  'typescript@5.6.3': {}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["pnpm-lock.yaml", "tsconfig.base.json", "biome.json"],
+  "pipeline": {
+    "lint": { "outputs": [] },
+    "typecheck": { "outputs": [] },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "build/**"]
+    },
+    "test": { "dependsOn": ["^build"], "outputs": [] }
+  }
+}

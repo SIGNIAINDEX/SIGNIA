@@ -1,0 +1,40 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    environment:
+      - SIGNIA_API_BIND=0.0.0.0:8080
+      - SIGNIA_STORE_SQLITE_PATH=/data/signia.sqlite
+      - SIGNIA_STORE_OBJECTS_DIR=/data/objects
+      - SIGNIA_API_AUTH_MODE=none
+    ports:
+      - "8080:8080"
+    volumes:
+      - signia_data:/data
+
+  interface:
+    build:
+      context: .
+      dockerfile: infra/docker/interface.Dockerfile
+    environment:
+      - PORT=8090
+      - SIGNIA_INTERFACE_API_BASE_URL=http://api:8080
+    ports:
+      - "8090:8090"
+    depends_on:
+      - api
+
+  console:
+    build:
+      context: .
+      dockerfile: infra/docker/console.Dockerfile
+    environment:
+      - NEXT_PUBLIC_SIGNIA_API_BASE_URL=http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  signia_data:

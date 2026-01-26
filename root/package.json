@@ -1,0 +1,19 @@
+{
+  "name": "signia-monorepo",
+  "private": true,
+  "packageManager": "pnpm@9.15.1",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "build": "turbo build",
+    "test": "turbo test",
+    "format": "biome format . --write",
+    "ci": "pnpm lint && pnpm typecheck && pnpm build && pnpm test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "turbo": "^2.2.3",
+    "typescript": "^5.6.3"
+  }
+}
